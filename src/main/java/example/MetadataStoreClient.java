@@ -56,7 +56,8 @@ public class MetadataStoreClient {
 
     public void query(ByteString minID, ByteString maxID, String keyRegex) {
         try {
-            info("*** Query minID: {0}, maxID: {1}, keyRegex: {2}", minID.toString(), maxID.toString(), keyRegex);
+            Object[] params = {minID.toString(), maxID.toString(), keyRegex};
+            logger.log(Level.INFO, "*** Query minID: {0}, maxID: {1}, keyRegex: {2}", params);
             Criteria request = Criteria.newBuilder().setKeyRegex(keyRegex).setMinId(minID).setMaxId(maxID).build();
             Iterator<Result> results = blockingStub.query(request);
             StringBuilder responseLog = new StringBuilder("Result: ");
@@ -65,7 +66,7 @@ public class MetadataStoreClient {
                 responseLog.append(result);
                 System.out.println(result.getKey());
             }
-            info(responseLog.toString());
+            logger.log(Level.INFO, responseLog.toString());
         } catch (RuntimeException e) {
             logger.log(Level.WARNING, "RPC failed", e);
             System.out.println("Connection failed");
@@ -76,7 +77,8 @@ public class MetadataStoreClient {
     /*returnQuery returns blocking stream call*/
     public Iterator returnQuery(ByteString minID, ByteString maxID, String keyRegex) {
         try {
-            info("*** Query minID: {0}, maxID: {1}, keyRegex: {2}", minID.toString(), maxID.toString(), keyRegex);
+            Object[] params = {minID.toString(), maxID.toString(), keyRegex};
+            logger.log(Level.INFO, "*** Query minID: {0}, maxID: {1}, keyRegex: {2}", params);
             Criteria request = Criteria.newBuilder().setKeyRegex(keyRegex).setMinId(minID).setMaxId(maxID).build();
             Iterator<Result> results = blockingStub.query(request);
             return results;
@@ -86,15 +88,26 @@ public class MetadataStoreClient {
         }
     }
 
-    private static void info(String msg, Object... params) {
-        logger.log(Level.INFO, msg, params);
+    public ByteString getUpperBound() {
+        byte[] upper = new byte[16];
+        for (int i = 0; i < 16; i++) {
+            upper[i] = Byte.parseByte("-1");
+        }
+        return ByteString.copyFrom(upper);
+    }
+
+    public ByteString getLowerBound() {
+        byte[] lower = new byte[16];
+        for (int i = 0; i < 16; i++) {
+            lower[i] = Byte.parseByte("0");
+        }
+        return ByteString.copyFrom(lower);
     }
 
     public static void main (String[] args) {
         MetadataStoreClient mdsc = new MetadataStoreClient("localhost", 12345);
-        //MinID and MaxID extremes of 128-bit range to include all results with matching Key fields
-        ByteString minID = ByteString.copyFrom(new BigInteger("-7F7F7F7F7F7F7F7F7F7F7F7F7F7F7F80", 16).toByteArray());
-        ByteString maxID = ByteString.copyFrom(new BigInteger("7F7F7F7F7F7F7F7F7F7F7F7F7F7F7F7F", 16).toByteArray());
+        ByteString minID = mdsc.getLowerBound();
+        ByteString maxID = mdsc.getUpperBound();
         mdsc.query(minID, maxID, ".*");
     }
 

@@ -95,7 +95,7 @@ public class MetadataStoreServer {
     }
 
     public static void main(String[] args) throws Exception {
-        MetadataStoreServer server = new MetadataStoreServer(12345, "/home/roy/Documents/Webdata/TheWinner/AccessLogsBetter.txt");
+        MetadataStoreServer server = new MetadataStoreServer(12345, args[0]);
         server.start();
     }
 }

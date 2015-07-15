@@ -19,7 +19,6 @@ package example
 import java.lang.Long
 import java.math.BigInteger
 
-import Java.Subsidiaries.Testing
 import anything.protocode.Interface.Result
 import com.google.protobuf.ByteString
 import org.apache.spark.rdd.RDD
@@ -43,7 +42,7 @@ import scala.collection.JavaConversions
 * maxID - largest ID that will be included in partitioning
 * only results whose Key field matches queryRegex will be returned*/
 
-class MetadataStoreRDD[Result](sc: SparkContext, port: Int, IP: String, minID: ByteString, maxID: ByteString, queryRegex: String) extends RDD[Any](sc, Nil) {
+class MetadataStoreRDD[Result](sc: SparkContext, port: Int, IP: String, queryRegex: String) extends RDD[Any](sc, Nil) {
   val partitionArray = new Array[Partition](256)
 
   override def compute(split: Partition, context: TaskContext): Iterator[Result] = {
@@ -76,8 +75,6 @@ class MetadataStoreRDD[Result](sc: SparkContext, port: Int, IP: String, minID: B
     for (i <- 0 until 16) {
       lowerArray(i) = 255.toByte
     }
-    Testing.byteArrayPrinter(lowerArray)
-    Testing.byteArrayPrinter(upperArray)
     (ByteString.copyFrom(lowerArray),
       ByteString.copyFrom(upperArray))
   }
@@ -115,22 +112,19 @@ object ResultsProcessor {
   def main(args: Array[String]): Unit = {
     val conf = new SparkConf().setAppName("resultsProcessor").setMaster("local[4]")
     val sc = new SparkContext(conf)
-    //MinID and MaxID extremes of 128-bit range to include all results with matching Key fields
-    val minID: ByteString = ByteString.copyFrom(new BigInteger("-7F7F7F7F7F7F7F7F7F7F7F7F7F7F7F80", 16).toByteArray)
-    val maxID: ByteString = ByteString.copyFrom(new BigInteger("7F7F7F7F7F7F7F7F7F7F7F7F7F7F7F7F", 16).toByteArray)
-    val mdsr = new MetadataStoreRDD[Result](sc, 12345, "localhost", minID, maxID, ".*")
+    val mdsr = new MetadataStoreRDD[Result](sc, 12345, "localhost", ".*")
     
     val sqlContext = new org.apache.spark.sql.SQLContext(sc)
     val resultDF = sqlContext.createDataFrame(mdsr.map(rowify), ResultStructTypeBuilder())
     resultDF.persist()
-    
+
     val cityBlocksRDD = resultDF.sqlContext.sparkContext.textFile(args(0))
     val cityBlocksSchema = CityBlockStructTypeBuilder(cityBlocksRDD.first().split(","))
     val cityBlocksRowRDD = cityBlocksRDD.mapPartitionsWithIndex(headerRemover).map(_.split(",", 9)).map(p => Row(p(0), p(1), p(2), p(3), p(4), p(5), p(6), p(7), p(8), convertCIDRRangeStringToMinLong(p(0)), convertCIDRRangeStringToMaxLong(p(0))))
     val cityBlocksDF = sqlContext.createDataFrame(cityBlocksRowRDD, cityBlocksSchema)
     cityBlocksDF.persist()
     
-    val cityLocationRDD = resultDF.sqlContext.sparkContext.textFile("/home/roy/Documents/Webdata/TheWinner/GeoLite2-City-CSV_20150602/GeoLite2-City-Locations-en.csv")
+    val cityLocationRDD = resultDF.sqlContext.sparkContext.textFile(args(1))
     val cityLocationSchema = CityLocationStructTypeBuilder(cityLocationRDD.first().split(","))
     val cityLocationRowRDD = cityLocationRDD.mapPartitionsWithIndex(headerRemover).map(_.split(",", 13)).map(p => Row(p(0), p(1), p(2), p(3), p(4), p(5), p(6), p(7), p(8), p(9), p(10), p(11), p(12)))
     val cityLocationDF = sqlContext.createDataFrame(cityLocationRowRDD, cityLocationSchema)

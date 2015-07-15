@@ -56,10 +56,10 @@ public class MetadataStoreIMPL implements MetadataStoreGrpc.MetadataStore {
         byte[] aArray = a.toByteArray();
         byte[] bArray = b.toByteArray();
         for (int i = 0; i < 16; i++) {
-            if (aArray[i] > bArray[i]) {
+            if ((aArray[i] & 0xFF) > (bArray[i] & 0xFF)) {
                 return true;
             }
-            if (aArray[i] < bArray[i]) {
+            if ((aArray[i] & 0xFF) < (bArray[i] & 0xFF)) {
                 return false;
             }
         }
@@ -71,10 +71,10 @@ public class MetadataStoreIMPL implements MetadataStoreGrpc.MetadataStore {
         byte[] aArray = a.toByteArray();
         byte[] bArray = b.toByteArray();
         for (int i = 0; i < 16; i++) {
-            if (aArray[i] < bArray[i]) {
+            if ((aArray[i] & 0xFF) < (bArray[i] & 0xFF)) {
                 return true;
             }
-            if (aArray[i] > bArray[i]) {
+            if ((aArray[i] & 0xFF) > (bArray[i] & 0xFF)) {
                 return false;
             }
         }
