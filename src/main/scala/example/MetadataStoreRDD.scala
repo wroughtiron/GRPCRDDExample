@@ -135,10 +135,10 @@ object ResultsProcessor {
     val resultsAndLocationsDF = mapIPToLocation(resultDF, cityBlocksDF, cityLocationDF)
     resultsAndLocationsDF.persist()
 
-    val continentNumbersDF = countHits(resultsAndLocationsDF)
-    continentNumbersDF.persist()
+    val cityNumbersDF = countHits(resultsAndLocationsDF)
+    cityNumbersDF.persist()
 
-    printToPlainText(continentNumbersDF, args(2))
+    writeToPlainText(cityNumbersDF, args(2))
 
     println(resultDF.show())
     println(resultDF.count())
@@ -148,8 +148,8 @@ object ResultsProcessor {
     println(cityLocationDF.count())
     println(resultsAndLocationsDF.show())
     println(resultsAndLocationsDF.count())
-    println(continentNumbersDF.show())
-    println(continentNumbersDF.count())
+    println(cityNumbersDF.show())
+    println(cityNumbersDF.count())
   }
 
   def ResultStructTypeBuilder (): StructType = {
@@ -230,7 +230,7 @@ object ResultsProcessor {
     longs{0}*16777216 + longs{1}*65536 + longs{2}*256 + longs{3}
   }
 
-  def printToPlainText(df: DataFrame, filename: String): Unit = {
+  def writeToPlainText(df: DataFrame, filename: String): Unit = {
     try {
       val pw: PrintWriter = new PrintWriter(new File(filename))
       val contents = df.collect()
@@ -246,10 +246,6 @@ object ResultsProcessor {
         throw new RuntimeException(e)
       }
     }
-  }
-
-  def printWriterWrite(row: Row, pw: PrintWriter): Unit = {
-    pw.write(row.toString())
   }
 
   def mapIPToLocation(resultDF: DataFrame, cityBlocksDF: DataFrame, cityLocationDF: DataFrame): DataFrame = {
