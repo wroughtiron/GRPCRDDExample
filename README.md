@@ -69,6 +69,6 @@ For more information on message specification, please visit: [Protocol Buffers] 
 
 ## Server Data
 
-In this example, data was parsed from a text file in Common Log Format. For more information on different log formats, please visit [Log Files] (http://httpd.apache.org/docs/1.3/logs.html)
+In this example, data was parsed from a [text file] (https://github.com/wroughtiron/GRPCRDDExample/blob/master/LittlelogsRandomized.txt) in Common Log Format. For more information on different log formats, please visit [Log Files] (http://httpd.apache.org/docs/1.3/logs.html)
 
 It must be noted that only numeric data IP addresses can be queried on CIDR Blocks. The original text file (with hostnames specified instead of IP addresses in places) can be found at: [EPA-HTTP] (http://ita.ee.lbl.gov/html/contrib/EPA-HTTP.html)
