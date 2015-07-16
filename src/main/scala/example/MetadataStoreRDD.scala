@@ -17,7 +17,9 @@
 package example
 
 import java.lang.Long
-import java.math.BigInteger
+import java.io.File
+import java.io.FileNotFoundException
+import java.io.PrintWriter
 
 import anything.protocode.Interface.Result
 import com.google.protobuf.ByteString
@@ -113,7 +115,7 @@ object ResultsProcessor {
     val conf = new SparkConf().setAppName("resultsProcessor").setMaster("local[4]")
     val sc = new SparkContext(conf)
     val mdsr = new MetadataStoreRDD[Result](sc, 12345, "localhost", ".*")
-    
+
     val sqlContext = new org.apache.spark.sql.SQLContext(sc)
     val resultDF = sqlContext.createDataFrame(mdsr.map(rowify), ResultStructTypeBuilder())
     resultDF.persist()
@@ -131,7 +133,13 @@ object ResultsProcessor {
     cityLocationDF.persist()
     
     val resultsAndLocationsDF = mapIPToLocation(resultDF, cityBlocksDF, cityLocationDF)
-    
+    resultsAndLocationsDF.persist()
+
+    val continentNumbersDF = countHits(resultsAndLocationsDF)
+    continentNumbersDF.persist()
+
+    printToPlainText(continentNumbersDF, args(2))
+
     println(resultDF.show())
     println(resultDF.count())
     println(cityBlocksDF.show())
@@ -140,6 +148,8 @@ object ResultsProcessor {
     println(cityLocationDF.count())
     println(resultsAndLocationsDF.show())
     println(resultsAndLocationsDF.count())
+    println(continentNumbersDF.show())
+    println(continentNumbersDF.count())
   }
 
   def ResultStructTypeBuilder (): StructType = {
@@ -220,16 +230,46 @@ object ResultsProcessor {
     longs{0}*16777216 + longs{1}*65536 + longs{2}*256 + longs{3}
   }
 
+  def printToPlainText(df: DataFrame, filename: String): Unit = {
+    try {
+      val pw: PrintWriter = new PrintWriter(new File(filename))
+      val contents = df.collect()
+      print("")
+      for (row <- contents) {
+        val rowString = row.toString()
+        pw.write(rowString.substring(1, rowString.length() - 1) + "\n")
+      }
+      pw.close
+    }
+    catch {
+      case e: FileNotFoundException => {
+        throw new RuntimeException(e)
+      }
+    }
+  }
+
+  def printWriterWrite(row: Row, pw: PrintWriter): Unit = {
+    pw.write(row.toString())
+  }
+
   def mapIPToLocation(resultDF: DataFrame, cityBlocksDF: DataFrame, cityLocationDF: DataFrame): DataFrame = {
     resultDF.registerTempTable("resultTable")
     cityBlocksDF.registerTempTable("cityBlocksTable")
     cityLocationDF.registerTempTable("cityLocationTable")
     resultDF.sqlContext.sql(
-      " SELECT resultTable.Time, resultTable.Key, resultTable.Value, cityBlocksTable.network, cityBlocksTable.geoname_id, cityLocationTable.geoname_id, cityLocationTable.continent_name, cityLocationTable.city_name" +
+      " SELECT resultTable.Time, resultTable.Key, resultTable.Value, cityBlocksTable.network, cityBlocksTable.geoname_id, cityLocationTable.geoname_id, cityLocationTable.continent_name, cityLocationTable.country_name, cityLocationTable.city_name" +
         " FROM resultTable" +
         " JOIN cityBlocksTable" +
         " ON resultTable.IP_Long BETWEEN cityBlocksTable.Network_IP_Min AND cityBlocksTable.Network_IP_Max" +
         " JOIN cityLocationTable" +
         " ON cityBlocksTable.geoname_id = cityLocationTable.geoname_id")
+  }
+
+  def countHits(resultsAndLocationsDF: DataFrame): DataFrame = {
+    resultsAndLocationsDF.registerTempTable("resultsAndLocationsTable")
+    resultsAndLocationsDF.sqlContext.sql(
+      " SELECT COUNT(resultsAndLocationsTable.city_name), resultsAndLocationsTable.city_name" +
+        " FROM resultsAndLocationsTable" +
+        " GROUP BY resultsAndLocationsTable.city_name")
   }
 }
