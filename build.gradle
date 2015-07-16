@@ -1,0 +1,38 @@
+apply plugin: 'java'
+apply plugin: 'scala'
+
+apply plugin: 'idea'
+
+apply plugin: 'com.google.protobuf'
+
+buildscript {
+  repositories {
+    mavenCentral()
+  }
+  dependencies {
+    classpath 'com.google.protobuf:protobuf-gradle-plugin:0.4.1'
+  }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile 'io.grpc:grpc-all:0.7.1'
+    compile 'org.scala-lang:scala-library:2.10.5'
+   // compile 'org.apache.spark:spark-core_2.10:1.4.0'
+}
+
+sourceSets {
+  main {
+    proto {
+      plugins {
+        grpc { }
+      }
+    }
+  }
+}
+
+protocDep = "com.google.protobuf:protoc:3.0.0-alpha-3"
+protobufNativeCodeGenPluginDeps = ["grpc:io.grpc:protoc-gen-grpc-java:0.7.1"]
