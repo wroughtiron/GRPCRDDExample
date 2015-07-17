@@ -18,7 +18,27 @@ In this example, the following DataFrames were constructed:
 
 The original csv files from which the latter two DataFrames were constructed can be found in this zip: [GeoLite2 City] (http://geolite.maxmind.com/download/geoip/database/GeoLite2-City-CSV.zip)
 
-First a DataFrame (resultAndLocationsDF) is built mapping IP adresses of the access logs to CIDR IPv4 blocks, CIDR IPv4 blocks to geoname ID's and geoname_ID's to geographical information (including city names.) Then another DataFrame (cityNumbersDF) is built from a count query that is performed, counting the number of hits stored in the RDD for each city successfully mapped. This DataFrame is written to a plain text csv file. The following plot was constructed using this data:
+First a DataFrame (resultAndLocationsDF) is built mapping IP adresses of the access logs to CIDR IPv4 blocks, CIDR IPv4 blocks to geoname ID's and geoname_ID's to geographical information (including city names.) This is done by performing the following SparkSQL query on all three DataFrames registered as tables:
+
+```
+" SELECT resultTable.Time, resultTable.Key, resultTable.Value, cityBlocksTable.network, cityBlocksTable.geoname_id, cityLocationTable.geoname_id, cityLocationTable.continent_name, cityLocationTable.country_name, cityLocationTable.city_name" +
+        " FROM resultTable" +
+        " JOIN cityBlocksTable" +
+        " ON resultTable.IP_Long BETWEEN cityBlocksTable.Network_IP_Min AND cityBlocksTable.Network_IP_Max" +
+        " JOIN cityLocationTable" +
+        " ON cityBlocksTable.geoname_id = cityLocationTable.geoname_id"
+```
+
+Then another DataFrame (cityNumbersDF) is built from a count query counting the number of hits stored in the RDD for each city successfully mapped. This is done by performing the following SparkSQL query on resultAndLocationsDF registered as a table:
+
+```
+" SELECT COUNT(resultsAndLocationsTable.city_name), resultsAndLocationsTable.city_name" +
+        " FROM resultsAndLocationsTable" +
+        " GROUP BY resultsAndLocationsTable.city_name"
+```
+
+
+cityNumbersDF is written to a plain text csv file. The following plot was constructed using the data in this file:
 
 ![alt tag](https://raw.githubusercontent.com/wroughtiron/GRPCRDDExample/master/Number_of_Hits_Per_City.png)
 
